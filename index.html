@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+
+<title>Mobile Game Controller</title>
+
+<style>
+/* ---------- GLOBAL ---------- */
+body {
+  margin: 0;
+  height: 100vh;
+  background: radial-gradient(1200px 800px at 50% 30%, #1a1a1a, #0b0b0b);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont;
+  touch-action: none;
+  color: white;
+}
+
+/* ---------- CONTROLLER LAYOUT ---------- */
+.controller {
+  width: 100%;
+  max-width: 900px;
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  align-items: center;
+  gap: 50px;
+  padding: 40px;
+}
+
+/* ---------- JOYSTICK ---------- */
+.joystick-base {
+  width: 180px;
+  height: 180px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 30% 30%, #3a3a3a, #1f1f1f);
+  box-shadow: inset 0 0 20px #000, 0 15px 40px rgba(0,0,0,.7);
+  position: relative;
+}
+
+.joystick-knob {
+  width: 70px;
+  height: 70px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 30% 30%, #aaa, #666);
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  box-shadow: 0 8px 20px rgba(0,0,0,.8);
+}
+
+/* ---------- BUTTONS ---------- */
+.buttons {
+  display: grid;
+  grid-template-columns: repeat(2, 70px);
+  grid-template-rows: repeat(2, 70px);
+  gap: 16px;
+  justify-content: center;
+}
+
+.btn {
+  width: 70px;
+  height: 70px;
+  border-radius: 50%;
+  font-size: 22px;
+  font-weight: bold;
+  border: none;
+  box-shadow: 0 10px 24px rgba(0,0,0,.7);
+}
+
+.btn:active {
+  transform: scale(0.95);
+  box-shadow: inset 0 6px 14px rgba(0,0,0,.8);
+}
+
+.btn.a { background: #2ecc71; }
+.btn.b { background: #e74c3c; }
+.btn.x { background: #3498db; }
+.btn.y { background: #f1c40f; }
+
+/* ---------- MOBILE ---------- */
+@media (max-width: 768px) {
+  .controller {
+    grid-template-columns: 1fr;
+    gap: 40px;
+  }
+}
+</style>
+</head>
+
+<body>
+
+<div class="controller">
+
+  <!-- LEFT JOYSTICK -->
+  <div class="joystick-base" id="leftBase">
+    <div class="joystick-knob" id="leftKnob"></div>
+  </div>
+
+  <!-- BUTTONS -->
+  <div class="buttons">
+    <button class="btn x">X</button>
+    <button class="btn y">Y</button>
+    <button class="btn a">A</button>
+    <button class="btn b">B</button>
+  </div>
+
+  <!-- RIGHT JOYSTICK -->
+  <div class="joystick-base" id="rightBase">
+    <div class="joystick-knob" id="rightKnob"></div>
+  </div>
+
+</div>
+
+<script>
+/* ---------- SIMPLE JOYSTICK LOGIC ---------- */
+function setupJoystick(base, knob) {
+  const radius = 90;
+  const knobRadius = 35;
+  let dragging = false;
+
+  function move(e) {
+    const rect = base.getBoundingClientRect();
+    const x = e.clientX - rect.left - radius;
+    const y = e.clientY - rect.top - radius;
+
+    const dist = Math.min(Math.sqrt(x*x + y*y), radius - knobRadius);
+    const angle = Math.atan2(y, x);
+
+    const fx = dist * Math.cos(angle);
+    const fy = dist * Math.sin(angle);
+
+    knob.style.left = `${radius + fx}px`;
+    knob.style.top  = `${radius + fy}px`;
+  }
+
+  knob.addEventListener("pointerdown", () => dragging = true);
+  window.addEventListener("pointerup", () => {
+    dragging = false;
+    knob.style.left = "50%";
+    knob.style.top = "50%";
+  });
+  window.addEventListener("pointermove", e => dragging && move(e));
+}
+
+setupJoystick(
+  document.getElementById("leftBase"),
+  document.getElementById("leftKnob")
+);
+
+setupJoystick(
+  document.getElementById("rightBase"),
+  document.getElementById("rightKnob")
+);
+</script>
+
+</body>
+</html>
