@@ -14,12 +14,12 @@ body {
   display: flex;
   justify-content: center;
   align-items: center;
-  font-family: system-ui, -apple-system, BlinkMacSystemFont;
+  font-family: system-ui;
   touch-action: none;
   color: white;
 }
 
-/* ---------- CONTROLLER (DESKTOP) ---------- */
+/* ---------- CONTROLLER ---------- */
 .controller {
   width: 100%;
   max-width: 900px;
@@ -52,14 +52,13 @@ body {
   box-shadow: 0 8px 20px rgba(0,0,0,.8);
 }
 
-/* ---------- ABXY BUTTONS ---------- */
+/* ---------- BUTTONS ---------- */
 .buttons {
   display: grid;
   grid-template-columns: repeat(3, 70px);
   grid-template-rows: repeat(3, 70px);
   gap: 12px;
   justify-content: center;
-  align-items: center;
 }
 
 .btn {
@@ -80,54 +79,25 @@ body {
 .btn.active {
   transform: scale(0.95);
   box-shadow: inset 0 6px 14px rgba(0,0,0,.9);
-  filter: brightness(1.2);
 }
 
-/* ---------- MOBILE (REALME NARZO 20 PRO OPTIMIZED) ---------- */
+/* ---------- MOBILE ---------- */
 @media (max-width: 768px) {
-
-  body {
-    align-items: flex-end;
-  }
+  body { align-items: flex-end; }
 
   .controller {
     grid-template-columns: 1fr 1fr;
     grid-template-rows: auto auto;
     gap: 20px;
     padding: 20px;
-    width: 100%;
   }
 
-  #leftBase {
-    justify-self: start;
-    transform: scale(1.15);
-  }
-
-  #rightBase {
-    justify-self: end;
-    transform: scale(1.15);
-  }
+  #leftBase { justify-self: start; transform: scale(1.15); }
+  #rightBase { justify-self: end; transform: scale(1.15); }
 
   .buttons {
     grid-column: 1 / span 2;
-    margin-top: 10px;
     transform: scale(1.1);
-  }
-
-  .joystick-base {
-    width: 160px;
-    height: 160px;
-  }
-
-  .joystick-knob {
-    width: 65px;
-    height: 65px;
-  }
-
-  .btn {
-    width: 65px;
-    height: 65px;
-    font-size: 20px;
   }
 }
 </style>
@@ -142,19 +112,11 @@ body {
     <div class="joystick-knob" id="leftKnob"></div>
   </div>
 
-  <!-- ABXY BUTTONS (XBOX LAYOUT) -->
+  <!-- ABXY -->
   <div class="buttons">
-    <div></div>
-    <button class="btn y">Y</button>
-    <div></div>
-
-    <button class="btn x">X</button>
-    <div></div>
-    <button class="btn b">B</button>
-
-    <div></div>
-    <button class="btn a">A</button>
-    <div></div>
+    <div></div><button class="btn y">Y</button><div></div>
+    <button class="btn x">X</button><div></div><button class="btn b">B</button>
+    <div></div><button class="btn a">A</button><div></div>
   </div>
 
   <!-- RIGHT JOYSTICK -->
@@ -165,78 +127,107 @@ body {
 </div>
 
 <script>
-/* ===============================
-   HAPTIC FEEDBACK (SAFE)
-   =============================== */
+/* ---------- HAPTICS ---------- */
 function haptic(ms = 10) {
-  if ("vibrate" in navigator) {
-    navigator.vibrate(ms);
+  if ("vibrate" in navigator) navigator.vibrate(ms);
+}
+
+/* ---------- CLOUD WEBSOCKET ---------- */
+const WS_URL = "wss://controller-cloud.onrender.com";
+let socket = null;
+
+function connectCloud() {
+  socket = new WebSocket(WS_URL);
+
+  socket.onopen = () => console.log("✅ Connected to cloud");
+  socket.onclose = () => setTimeout(connectCloud, 2000);
+}
+connectCloud();
+
+/* ---------- CONTROLLER STATE ---------- */
+const state = {
+  leftJoy: { x: 0, y: 0 },
+  rightJoy: { x: 0, y: 0 },
+  buttons: { A:false, B:false, X:false, Y:false }
+};
+
+function sendState() {
+  if (socket && socket.readyState === WebSocket.OPEN) {
+    socket.send(JSON.stringify(state));
   }
 }
 
-/* ===============================
-   MULTI-TOUCH JOYSTICKS
-   =============================== */
-function setupJoystick(base, knob) {
-  const radius = 90;
-  const knobRadius = 35;
-  let pointerId = null;
+/* ---------- JOYSTICKS ---------- */
+function setupJoystick(base, knob, key) {
+  const radius = 90, knobRadius = 35;
+  let pid = null;
 
   knob.addEventListener("pointerdown", e => {
-  pointerId = e.pointerId;
-  knob.setPointerCapture(pointerId);
-  haptic(8); // light joystick feedback
-});
-
+    pid = e.pointerId;
+    knob.setPointerCapture(pid);
+    haptic(8);
+  });
 
   knob.addEventListener("pointermove", e => {
-    if (e.pointerId !== pointerId) return;
+    if (e.pointerId !== pid) return;
 
-    const rect = base.getBoundingClientRect();
-    const x = e.clientX - rect.left - radius;
-    const y = e.clientY - rect.top - radius;
+    const r = base.getBoundingClientRect();
+    const x = e.clientX - r.left - radius;
+    const y = e.clientY - r.top - radius;
 
-    const dist = Math.min(Math.sqrt(x*x + y*y), radius - knobRadius);
-    const angle = Math.atan2(y, x);
+    const d = Math.min(Math.sqrt(x*x+y*y), radius-knobRadius);
+    const a = Math.atan2(y,x);
 
-    knob.style.left = `${radius + dist * Math.cos(angle)}px`;
-    knob.style.top  = `${radius + dist * Math.sin(angle)}px`;
+    const fx = d*Math.cos(a), fy = d*Math.sin(a);
+
+    knob.style.left = `${radius+fx}px`;
+    knob.style.top = `${radius+fy}px`;
+
+    state[key] = {
+      x: +(fx/(radius-knobRadius)).toFixed(2),
+      y: +(fy/(radius-knobRadius)).toFixed(2)
+    };
+    sendState();
   });
+
+  function reset() {
+    pid = null;
+    knob.style.left = "50%";
+    knob.style.top = "50%";
+    state[key] = { x:0, y:0 };
+    sendState();
+  }
 
   knob.addEventListener("pointerup", reset);
   knob.addEventListener("pointercancel", reset);
-
-  function reset() {
-    pointerId = null;
-    knob.style.left = "50%";
-    knob.style.top = "50%";
-  }
 }
 
-setupJoystick(leftBase, leftKnob);
-setupJoystick(rightBase, rightKnob);
+setupJoystick(leftBase, leftKnob, "leftJoy");
+setupJoystick(rightBase, rightKnob, "rightJoy");
 
-/* ===============================
-   MULTI-TOUCH BUTTONS
-   =============================== */
+/* ---------- BUTTONS ---------- */
 document.querySelectorAll(".btn").forEach(btn => {
   let pid = null;
+  const key = btn.textContent;
 
   btn.addEventListener("pointerdown", e => {
-  pid = e.pointerId;
-  btn.setPointerCapture(pid);
-  btn.classList.add("active");
-  haptic(15); // button press feedback
-});
-
-
-  btn.addEventListener("pointerup", reset);
-  btn.addEventListener("pointercancel", reset);
+    pid = e.pointerId;
+    btn.setPointerCapture(pid);
+    btn.classList.add("active");
+    state.buttons[key] = true;
+    haptic(15);
+    sendState();
+  });
 
   function reset() {
     pid = null;
     btn.classList.remove("active");
+    state.buttons[key] = false;
+    sendState();
   }
+
+  btn.addEventListener("pointerup", reset);
+  btn.addEventListener("pointercancel", reset);
 });
 </script>
 
