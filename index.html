@@ -1,9 +1,8 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Mobile Game Controller</title>
 
 <style>
@@ -20,7 +19,7 @@ body {
   color: white;
 }
 
-/* ---------- CONTROLLER LAYOUT ---------- */
+/* ---------- CONTROLLER (DESKTOP) ---------- */
 .controller {
   width: 100%;
   max-width: 900px;
@@ -31,7 +30,7 @@ body {
   padding: 40px;
 }
 
-/* ---------- JOYSTICK ---------- */
+/* ---------- JOYSTICKS ---------- */
 .joystick-base {
   width: 180px;
   height: 180px;
@@ -53,13 +52,14 @@ body {
   box-shadow: 0 8px 20px rgba(0,0,0,.8);
 }
 
-/* ---------- BUTTONS ---------- */
+/* ---------- ABXY BUTTONS ---------- */
 .buttons {
   display: grid;
-  grid-template-columns: repeat(2, 70px);
-  grid-template-rows: repeat(2, 70px);
-  gap: 16px;
+  grid-template-columns: repeat(3, 70px);
+  grid-template-rows: repeat(3, 70px);
+  gap: 12px;
   justify-content: center;
+  align-items: center;
 }
 
 .btn {
@@ -72,21 +72,62 @@ body {
   box-shadow: 0 10px 24px rgba(0,0,0,.7);
 }
 
-.btn:active {
-  transform: scale(0.95);
-  box-shadow: inset 0 6px 14px rgba(0,0,0,.8);
-}
-
 .btn.a { background: #2ecc71; }
 .btn.b { background: #e74c3c; }
 .btn.x { background: #3498db; }
 .btn.y { background: #f1c40f; }
 
-/* ---------- MOBILE ---------- */
+.btn.active {
+  transform: scale(0.95);
+  box-shadow: inset 0 6px 14px rgba(0,0,0,.9);
+  filter: brightness(1.2);
+}
+
+/* ---------- MOBILE (REALME NARZO 20 PRO OPTIMIZED) ---------- */
 @media (max-width: 768px) {
+
+  body {
+    align-items: flex-end;
+  }
+
   .controller {
-    grid-template-columns: 1fr;
-    gap: 40px;
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: auto auto;
+    gap: 20px;
+    padding: 20px;
+    width: 100%;
+  }
+
+  #leftBase {
+    justify-self: start;
+    transform: scale(1.15);
+  }
+
+  #rightBase {
+    justify-self: end;
+    transform: scale(1.15);
+  }
+
+  .buttons {
+    grid-column: 1 / span 2;
+    margin-top: 10px;
+    transform: scale(1.1);
+  }
+
+  .joystick-base {
+    width: 160px;
+    height: 160px;
+  }
+
+  .joystick-knob {
+    width: 65px;
+    height: 65px;
+  }
+
+  .btn {
+    width: 65px;
+    height: 65px;
+    font-size: 20px;
   }
 }
 </style>
@@ -101,12 +142,19 @@ body {
     <div class="joystick-knob" id="leftKnob"></div>
   </div>
 
-  <!-- BUTTONS -->
+  <!-- ABXY BUTTONS (XBOX LAYOUT) -->
   <div class="buttons">
-    <button class="btn x">X</button>
+    <div></div>
     <button class="btn y">Y</button>
-    <button class="btn a">A</button>
+    <div></div>
+
+    <button class="btn x">X</button>
+    <div></div>
     <button class="btn b">B</button>
+
+    <div></div>
+    <button class="btn a">A</button>
+    <div></div>
   </div>
 
   <!-- RIGHT JOYSTICK -->
@@ -117,13 +165,33 @@ body {
 </div>
 
 <script>
-/* ---------- SIMPLE JOYSTICK LOGIC ---------- */
+/* ===============================
+   HAPTIC FEEDBACK (SAFE)
+   =============================== */
+function haptic(ms = 10) {
+  if ("vibrate" in navigator) {
+    navigator.vibrate(ms);
+  }
+}
+
+/* ===============================
+   MULTI-TOUCH JOYSTICKS
+   =============================== */
 function setupJoystick(base, knob) {
   const radius = 90;
   const knobRadius = 35;
-  let dragging = false;
+  let pointerId = null;
 
-  function move(e) {
+  knob.addEventListener("pointerdown", e => {
+  pointerId = e.pointerId;
+  knob.setPointerCapture(pointerId);
+  haptic(8); // light joystick feedback
+});
+
+
+  knob.addEventListener("pointermove", e => {
+    if (e.pointerId !== pointerId) return;
+
     const rect = base.getBoundingClientRect();
     const x = e.clientX - rect.left - radius;
     const y = e.clientY - rect.top - radius;
@@ -131,31 +199,45 @@ function setupJoystick(base, knob) {
     const dist = Math.min(Math.sqrt(x*x + y*y), radius - knobRadius);
     const angle = Math.atan2(y, x);
 
-    const fx = dist * Math.cos(angle);
-    const fy = dist * Math.sin(angle);
+    knob.style.left = `${radius + dist * Math.cos(angle)}px`;
+    knob.style.top  = `${radius + dist * Math.sin(angle)}px`;
+  });
 
-    knob.style.left = `${radius + fx}px`;
-    knob.style.top  = `${radius + fy}px`;
-  }
+  knob.addEventListener("pointerup", reset);
+  knob.addEventListener("pointercancel", reset);
 
-  knob.addEventListener("pointerdown", () => dragging = true);
-  window.addEventListener("pointerup", () => {
-    dragging = false;
+  function reset() {
+    pointerId = null;
     knob.style.left = "50%";
     knob.style.top = "50%";
-  });
-  window.addEventListener("pointermove", e => dragging && move(e));
+  }
 }
 
-setupJoystick(
-  document.getElementById("leftBase"),
-  document.getElementById("leftKnob")
-);
+setupJoystick(leftBase, leftKnob);
+setupJoystick(rightBase, rightKnob);
 
-setupJoystick(
-  document.getElementById("rightBase"),
-  document.getElementById("rightKnob")
-);
+/* ===============================
+   MULTI-TOUCH BUTTONS
+   =============================== */
+document.querySelectorAll(".btn").forEach(btn => {
+  let pid = null;
+
+  btn.addEventListener("pointerdown", e => {
+  pid = e.pointerId;
+  btn.setPointerCapture(pid);
+  btn.classList.add("active");
+  haptic(15); // button press feedback
+});
+
+
+  btn.addEventListener("pointerup", reset);
+  btn.addEventListener("pointercancel", reset);
+
+  function reset() {
+    pid = null;
+    btn.classList.remove("active");
+  }
+});
 </script>
 
 </body>
