@@ -59,7 +59,7 @@ async def safe_send(ws, message: str) -> None:
 
 # ── Main handler ──────────────────────────────────────────────────────────────
 
-async def handler(ws):
+async def handler(ws, path):
     """
     Lifecycle for one WebSocket connection:
 
