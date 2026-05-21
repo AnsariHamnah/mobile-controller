@@ -86,6 +86,8 @@ async def handler(ws, path):
             log.warning(f"🚫  {addr} — first message was not valid JSON, closing.")
             return
 
+        
+
         # Validate join message structure
         if (
             msg.get("type") != "join"
