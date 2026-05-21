@@ -1,0 +1,527 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#0a0a0a">
+<title>Controller</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;700&display=swap');
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 20px);
+  --safe-left: env(safe-area-inset-left, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
+  --joy-size: min(160px, 22vw);
+  --btn-size: min(58px, 8vw);
+}
+
+html, body {
+  width: 100%;
+  height: 100dvh;
+  overflow: hidden;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+body {
+  background: #0a0a0a;
+  font-family: 'Rajdhani', system-ui, sans-serif;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding:
+    calc(var(--safe-top) + 8px)
+    calc(var(--safe-right) + 8px)
+    calc(var(--safe-bottom) + 8px)
+    calc(var(--safe-left) + 8px);
+}
+
+/* ── STATUS BAR ── */
+#status-bar {
+  position: absolute;
+  top: calc(var(--safe-top) + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  color: #444;
+  text-transform: uppercase;
+}
+#status-dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: #333;
+  transition: background 0.4s;
+}
+#status-dot.connected { background: #2ecc71; box-shadow: 0 0 6px #2ecc71; }
+#status-dot.connecting { background: #f39c12; animation: pulse-dot 1s ease-in-out infinite; }
+@keyframes pulse-dot { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+/* ── CONTROLLER BODY ── */
+#controller {
+  width: 100%;
+  max-width: 860px;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: clamp(8px, 3vw, 32px);
+  padding: 0 clamp(8px, 2vw, 24px);
+}
+
+/* ── JOYSTICK ── */
+.joy-wrap {
+  display: flex;
+  justify-content: center;
+}
+
+.joy-base {
+  width: var(--joy-size);
+  height: var(--joy-size);
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 34% 28%, #282828, #141414);
+  box-shadow:
+    inset 0 2px 6px rgba(255,255,255,0.04),
+    inset 0 -4px 12px rgba(0,0,0,0.9),
+    0 0 0 1px rgba(255,255,255,0.06),
+    0 12px 40px rgba(0,0,0,0.8);
+  position: relative;
+  flex-shrink: 0;
+}
+
+.joy-ring {
+  position: absolute;
+  inset: 12%;
+  border-radius: 50%;
+  border: 1px solid rgba(255,255,255,0.04);
+  pointer-events: none;
+}
+
+.joy-knob {
+  position: absolute;
+  width: 42%;
+  height: 42%;
+  border-radius: 50%;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  background:
+    radial-gradient(circle at 32% 28%, #666, #333 60%, #222);
+  box-shadow:
+    0 0 0 1px rgba(255,255,255,0.08),
+    0 6px 18px rgba(0,0,0,0.9),
+    inset 0 1px 3px rgba(255,255,255,0.12);
+  cursor: pointer;
+  transition: box-shadow 0.1s;
+}
+.joy-knob::after {
+  content: '';
+  position: absolute;
+  inset: 22%;
+  border-radius: 50%;
+  background: radial-gradient(circle at 40% 35%, rgba(255,255,255,0.12), transparent 60%);
+  pointer-events: none;
+}
+.joy-knob.active {
+  box-shadow:
+    0 0 0 1px rgba(255,255,255,0.15),
+    0 2px 8px rgba(0,0,0,0.9),
+    inset 0 2px 6px rgba(0,0,0,0.6);
+}
+
+/* ── CENTER CLUSTER ── */
+#center {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: clamp(6px, 2vw, 14px);
+}
+
+/* ABXY grid */
+#abxy {
+  display: grid;
+  grid-template-columns: repeat(3, var(--btn-size));
+  grid-template-rows: repeat(3, var(--btn-size));
+  gap: clamp(3px, 1vw, 8px);
+}
+
+.btn {
+  width: var(--btn-size);
+  height: var(--btn-size);
+  border-radius: 50%;
+  border: none;
+  font-family: 'Rajdhani', system-ui, sans-serif;
+  font-size: clamp(13px, 1.8vw, 18px);
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+  transition: transform 0.08s, box-shadow 0.08s;
+  -webkit-tap-highlight-color: transparent;
+  outline: none;
+}
+
+/* Per-button colours matching Xbox style */
+.btn.y { background: radial-gradient(circle at 40% 30%, #f5d86a, #c9a000); color: #3a2800; box-shadow: 0 6px 18px rgba(180,140,0,0.5), inset 0 1px 2px rgba(255,255,255,0.3); }
+.btn.x { background: radial-gradient(circle at 40% 30%, #5aabff, #0069cb); color: #002a52; box-shadow: 0 6px 18px rgba(0,105,200,0.5), inset 0 1px 2px rgba(255,255,255,0.3); }
+.btn.b { background: radial-gradient(circle at 40% 30%, #ff6e6e, #cc1c1c); color: #420000; box-shadow: 0 6px 18px rgba(200,20,20,0.5), inset 0 1px 2px rgba(255,255,255,0.3); }
+.btn.a { background: radial-gradient(circle at 40% 30%, #5ed97e, #1a8c38); color: #002a11; box-shadow: 0 6px 18px rgba(20,140,50,0.5), inset 0 1px 2px rgba(255,255,255,0.3); }
+
+.btn.pressed {
+  transform: scale(0.88);
+  box-shadow: 0 2px 6px rgba(0,0,0,0.8), inset 0 3px 8px rgba(0,0,0,0.6) !important;
+}
+
+/* Logo / home button area */
+#logo-area {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.small-btn {
+  width: 28px; height: 28px;
+  border-radius: 50%;
+  background: #1a1a1a;
+  border: 1px solid rgba(255,255,255,0.08);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 11px;
+  color: #555;
+  cursor: pointer;
+  font-family: 'Rajdhani', system-ui, sans-serif;
+  font-weight: 700;
+}
+#home-btn {
+  width: 36px; height: 36px;
+  background: radial-gradient(circle at 35% 30%, #2a2a2a, #111);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer;
+}
+#home-logo {
+  width: 16px; height: 16px;
+  fill: none;
+  stroke: rgba(255,255,255,0.4);
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* ── PLACEHOLDER CELLS (empty grid spots) ── */
+.empty { background: transparent; pointer-events: none; }
+
+/* ── QR OVERLAY ── */
+#qr-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.85);
+  z-index: 100;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 16px;
+}
+#qr-overlay.show { display: flex; }
+#qr-close {
+  color: #aaa;
+  font-size: 14px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  cursor: pointer;
+  padding: 8px 20px;
+  border: 1px solid #333;
+  border-radius: 6px;
+  background: #111;
+}
+#qr-text {
+  color: #aaa;
+  font-size: 13px;
+  letter-spacing: 0.05em;
+  max-width: 240px;
+  text-align: center;
+  line-height: 1.6;
+}
+
+/* ── LANDSCAPE LAYOUT ── */
+@media (orientation: landscape) {
+  :root {
+    --joy-size: min(140px, 20vh);
+    --btn-size: min(52px, 7.5vh);
+  }
+  body { justify-content: center; }
+}
+
+/* ── PORTRAIT COMPACT ── */
+@media (orientation: portrait) {
+  :root {
+    --joy-size: min(150px, 38vw);
+    --btn-size: min(58px, 13vw);
+  }
+  #controller {
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: auto auto;
+    max-width: 440px;
+  }
+  #center {
+    grid-column: 1 / span 2;
+    order: -1;
+  }
+  .joy-wrap:first-child { justify-content: flex-start; padding-left: 8px; }
+  .joy-wrap:last-child { justify-content: flex-end; padding-right: 8px; }
+}
+</style>
+</head>
+<body>
+
+<!-- Status bar -->
+<div id="status-bar">
+  <div id="status-dot" class="connecting"></div>
+  <span id="status-text">Connecting…</span>
+</div>
+
+<!-- Main controller -->
+<div id="controller">
+
+  <!-- Left joystick -->
+  <div class="joy-wrap">
+    <div class="joy-base" id="leftBase">
+      <div class="joy-ring"></div>
+      <div class="joy-knob" id="leftKnob"></div>
+    </div>
+  </div>
+
+  <!-- Center cluster -->
+  <div id="center">
+    <!-- Logo row -->
+    <div id="logo-area">
+      <div class="small-btn" id="btn-select">⧉</div>
+      <div id="home-btn">
+        <svg id="home-logo" viewBox="0 0 24 24">
+          <circle cx="12" cy="12" r="9"/>
+          <circle cx="12" cy="12" r="3.5"/>
+        </svg>
+      </div>
+      <div class="small-btn" id="btn-start">≡</div>
+    </div>
+
+    <!-- ABXY -->
+    <div id="abxy">
+      <div class="empty"></div>
+      <button class="btn y" data-key="Y">Y</button>
+      <div class="empty"></div>
+      <button class="btn x" data-key="X">X</button>
+      <div class="empty"></div>
+      <button class="btn b" data-key="B">B</button>
+      <div class="empty"></div>
+      <button class="btn a" data-key="A">A</button>
+      <div class="empty"></div>
+    </div>
+  </div>
+
+  <!-- Right joystick -->
+  <div class="joy-wrap">
+    <div class="joy-base" id="rightBase">
+      <div class="joy-ring"></div>
+      <div class="joy-knob" id="rightKnob"></div>
+    </div>
+  </div>
+
+</div>
+
+<!-- QR overlay (for share) -->
+<div id="qr-overlay">
+  <div id="qr-text">Scan this QR code to open the controller on another device</div>
+  <canvas id="qr-canvas" width="200" height="200"></canvas>
+  <div id="qr-close" onclick="document.getElementById('qr-overlay').classList.remove('show')">Close</div>
+</div>
+
+<script>
+/* ───────────────────────────────
+   HAPTICS
+─────────────────────────────── */
+function haptic(ms = 10) {
+  if ('vibrate' in navigator) navigator.vibrate(ms);
+}
+
+/* ───────────────────────────────
+   WEBSOCKET + AUTO RECONNECT
+─────────────────────────────── */
+const WS_URL = 'wss://controller-cloud.onrender.com/';
+let socket = null;
+let reconnectTimer = null;
+
+const dot = document.getElementById('status-dot');
+const statusText = document.getElementById('status-text');
+
+function setStatus(state, label) {
+  dot.className = state; // '', 'connecting', 'connected'
+  statusText.textContent = label;
+}
+
+function connectCloud() {
+  setStatus('connecting', 'Connecting…');
+  try { socket = new WebSocket(WS_URL); } catch(e) { retry(); return; }
+
+  socket.onopen  = () => setStatus('connected', 'Connected');
+  socket.onclose = () => { setStatus('', 'Disconnected'); retry(); };
+  socket.onerror = () => { socket.close(); };
+}
+
+function retry() {
+  clearTimeout(reconnectTimer);
+  reconnectTimer = setTimeout(connectCloud, 2500);
+}
+
+connectCloud();
+
+/* ───────────────────────────────
+   CONTROLLER STATE
+─────────────────────────────── */
+const state = {
+  leftJoy:  { x: 0, y: 0 },
+  rightJoy: { x: 0, y: 0 },
+  buttons:  { A: false, B: false, X: false, Y: false }
+};
+
+// Throttle sends to ~60fps
+let lastSend = 0;
+function sendState() {
+  const now = performance.now();
+  if (now - lastSend < 16) return;
+  lastSend = now;
+  if (socket && socket.readyState === WebSocket.OPEN) {
+    socket.send(JSON.stringify(state));
+  }
+}
+
+/* ───────────────────────────────
+   JOYSTICKS — pointer-math safe
+   (no transform:scale on bases)
+─────────────────────────────── */
+function setupJoystick(baseEl, knobEl, stateKey) {
+  let activePointer = null;
+  const DEAD = 0.08; // dead-zone fraction
+
+  function getRect() { return baseEl.getBoundingClientRect(); }
+
+  knobEl.addEventListener('pointerdown', e => {
+    if (activePointer !== null) return;
+    activePointer = e.pointerId;
+    knobEl.setPointerCapture(e.pointerId);
+    knobEl.classList.add('active');
+    haptic(8);
+  }, { passive: true });
+
+  knobEl.addEventListener('pointermove', e => {
+    if (e.pointerId !== activePointer) return;
+
+    const r = getRect();
+    const cx = r.left + r.width  / 2;
+    const cy = r.top  + r.height / 2;
+    const maxR = r.width / 2 * 0.72; // knob travel radius
+
+    const dx = e.clientX - cx;
+    const dy = e.clientY - cy;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    const clampedDist = Math.min(dist, maxR);
+    const angle = Math.atan2(dy, dx);
+
+    const fx = clampedDist * Math.cos(angle);
+    const fy = clampedDist * Math.sin(angle);
+
+    // Position knob visually (relative to base center)
+    knobEl.style.left = `${r.width  / 2 + fx}px`;
+    knobEl.style.top  = `${r.height / 2 + fy}px`;
+
+    let nx = fx / maxR;
+    let ny = fy / maxR;
+
+    // Apply dead-zone
+    if (Math.abs(nx) < DEAD) nx = 0;
+    if (Math.abs(ny) < DEAD) ny = 0;
+
+    state[stateKey] = {
+      x: +nx.toFixed(2),
+      y: +ny.toFixed(2)
+    };
+    sendState();
+  }, { passive: true });
+
+  function resetKnob(e) {
+    if (e.pointerId !== activePointer) return;
+    activePointer = null;
+    knobEl.classList.remove('active');
+    knobEl.style.left = '50%';
+    knobEl.style.top  = '50%';
+    state[stateKey] = { x: 0, y: 0 };
+    sendState();
+  }
+
+  knobEl.addEventListener('pointerup',     resetKnob, { passive: true });
+  knobEl.addEventListener('pointercancel', resetKnob, { passive: true });
+}
+
+setupJoystick(
+  document.getElementById('leftBase'),
+  document.getElementById('leftKnob'),
+  'leftJoy'
+);
+setupJoystick(
+  document.getElementById('rightBase'),
+  document.getElementById('rightKnob'),
+  'rightJoy'
+);
+
+/* ───────────────────────────────
+   ABXY BUTTONS
+─────────────────────────────── */
+document.querySelectorAll('.btn[data-key]').forEach(btn => {
+  let activePointer = null;
+  const key = btn.dataset.key;
+
+  btn.addEventListener('pointerdown', e => {
+    if (activePointer !== null) return;
+    activePointer = e.pointerId;
+    btn.setPointerCapture(e.pointerId);
+    btn.classList.add('pressed');
+    state.buttons[key] = true;
+    haptic(14);
+    sendState();
+  }, { passive: true });
+
+  function release(e) {
+    if (e.pointerId !== activePointer) return;
+    activePointer = null;
+    btn.classList.remove('pressed');
+    state.buttons[key] = false;
+    sendState();
+  }
+
+  btn.addEventListener('pointerup',     release, { passive: true });
+  btn.addEventListener('pointercancel', release, { passive: true });
+});
+
+/* ───────────────────────────────
+   PREVENT BROWSER GESTURES
+─────────────────────────────── */
+document.addEventListener('touchstart',  e => e.preventDefault(), { passive: false });
+document.addEventListener('touchmove',   e => e.preventDefault(), { passive: false });
+document.addEventListener('contextmenu', e => e.preventDefault());
+</script>
+
+</body>
+</html>
