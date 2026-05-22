@@ -13,23 +13,25 @@
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 :root {
-  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-top:    env(safe-area-inset-top,    0px);
   --safe-bottom: env(safe-area-inset-bottom, 20px);
-  --safe-left: env(safe-area-inset-left, 0px);
-  --safe-right: env(safe-area-inset-right, 0px);
-  --joy-size: min(160px, 22vw);
-  --btn-size: min(58px, 8vw);
+  --safe-left:   env(safe-area-inset-left,   0px);
+  --safe-right:  env(safe-area-inset-right,  0px);
+  --joy-size:    min(160px, 22vw);
+  --btn-size:    min(58px,  8vw);
+  --accent:      #00c8ff;
+  --accent-dim:  rgba(0, 200, 255, 0.18);
+  --sheet-bg:    #111114;
+  --section-bg:  #18181c;
 }
 
 html, body {
-  width: 100%;
-  height: 100dvh;
+  width: 100%; height: 100dvh;
   overflow: hidden;
   touch-action: none;
   user-select: none;
   -webkit-user-select: none;
 }
-
 body {
   background: #0a0a0a;
   font-family: 'Rajdhani', system-ui, sans-serif;
@@ -38,275 +40,529 @@ body {
   align-items: center;
   justify-content: center;
   padding:
-    calc(var(--safe-top) + 8px)
-    calc(var(--safe-right) + 8px)
+    calc(var(--safe-top)    + 8px)
+    calc(var(--safe-right)  + 8px)
     calc(var(--safe-bottom) + 8px)
-    calc(var(--safe-left) + 8px);
+    calc(var(--safe-left)   + 8px);
 }
 
-/* ── STATUS BAR ── */
+/* ══════════════════════════════════════════════════════
+   PRESS START SCREEN
+══════════════════════════════════════════════════════ */
+#start-screen {
+  position: fixed; inset: 0; z-index: 60;
+  background: #0a0a0a;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  gap: clamp(20px, 5vh, 36px);
+  padding: 32px;
+  transition: opacity 0.45s ease;
+}
+#start-screen::before {
+  content: '';
+  position: absolute; inset: 0;
+  background: repeating-linear-gradient(
+    0deg, transparent 0px, transparent 2px,
+    rgba(255,255,255,0.013) 2px, rgba(255,255,255,0.013) 4px
+  );
+  pointer-events: none;
+}
+#start-screen::after {
+  content: ''; position: absolute; inset: 0;
+  background: radial-gradient(ellipse 70% 55% at 50% 52%,
+    rgba(0,200,255,0.055) 0%, transparent 70%);
+  pointer-events: none;
+}
+#start-screen.fade-out { opacity: 0; pointer-events: none; }
+
+#ss-app-label {
+  font-size: 11px; font-weight: 500;
+  letter-spacing: 0.38em; color: #3a3a3a;
+  text-transform: uppercase; position: relative; z-index: 1;
+}
+#ss-room-card {
+  position: relative; z-index: 1;
+  border: 1px solid rgba(255,255,255,0.07); border-radius: 14px;
+  padding: clamp(18px,4vh,28px) clamp(32px,8vw,56px);
+  text-align: center; background: rgba(255,255,255,0.018);
+  box-shadow: 0 0 0 1px rgba(0,200,255,0.06), 0 0 40px rgba(0,200,255,0.06),
+    inset 0 1px 0 rgba(255,255,255,0.04);
+}
+#ss-room-eyebrow {
+  font-size: 9px; letter-spacing: 0.4em; color: #3a3a3a;
+  text-transform: uppercase; margin-bottom: 10px;
+}
+#ss-room-code {
+  font-size: clamp(32px, 9vw, 54px); font-weight: 700;
+  letter-spacing: 0.14em; color: #fff;
+  text-shadow: 0 0 18px rgba(0,200,255,0.65), 0 0 55px rgba(0,200,255,0.22);
+  line-height: 1;
+}
+#ss-input-card {
+  position: relative; z-index: 1;
+  display: none; flex-direction: column;
+  align-items: center; gap: 16px;
+  border: 1px solid rgba(255,255,255,0.07); border-radius: 14px;
+  padding: clamp(20px,4vh,32px) clamp(28px,7vw,48px);
+  background: rgba(255,255,255,0.018);
+  box-shadow: 0 0 0 1px rgba(0,200,255,0.06), inset 0 1px 0 rgba(255,255,255,0.04);
+}
+#ss-input-eyebrow {
+  font-size: 9px; letter-spacing: 0.4em; color: #444; text-transform: uppercase;
+}
+#ss-input {
+  font-family: 'Rajdhani', system-ui, sans-serif;
+  font-size: clamp(26px, 7vw, 38px); font-weight: 700;
+  letter-spacing: 0.16em; text-align: center; text-transform: uppercase;
+  background: transparent; border: none;
+  border-bottom: 1px solid rgba(255,255,255,0.18);
+  color: #fff; outline: none;
+  padding: 6px 4px 10px; width: clamp(160px, 45vw, 240px);
+  caret-color: var(--accent); -webkit-tap-highlight-color: transparent;
+}
+#ss-input::placeholder { color: #2a2a2a; }
+#ss-input-error { font-size: 11px; letter-spacing: 0.1em; color: #cc3333; min-height: 16px; }
+#ss-start-btn {
+  position: relative; z-index: 1;
+  font-family: 'Rajdhani', system-ui, sans-serif;
+  font-size: clamp(15px, 4.5vw, 20px); font-weight: 700;
+  letter-spacing: 0.28em; color: rgba(255,255,255,0.82);
+  background: none; border: none; outline: none; cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  padding: 18px 32px;
+  animation: press-pulse 1.5s ease-in-out infinite;
+}
+#ss-start-btn:active { transform: scale(0.94); }
+@keyframes press-pulse { 0%,100%{opacity:1} 50%{opacity:0.22} }
+#ss-hint {
+  position: relative; z-index: 1;
+  font-size: 11px; letter-spacing: 0.1em; color: #2a2a2a;
+  text-align: center; line-height: 1.7; max-width: 260px;
+}
+@keyframes shake {
+  0%,100%{transform:translateX(0)} 20%{transform:translateX(-7px)}
+  40%{transform:translateX(7px)} 60%{transform:translateX(-4px)} 80%{transform:translateX(4px)}
+}
+.shake { animation: shake 0.38s ease; }
+
+/* ══════════════════════════════════════════════════════
+   CONNECTING OVERLAY
+══════════════════════════════════════════════════════ */
+#connecting-overlay {
+  position: fixed; inset: 0; z-index: 55;
+  background: rgba(10,10,10,0.92);
+  display: none; flex-direction: column;
+  align-items: center; justify-content: center; gap: 18px;
+}
+#connecting-overlay.show { display: flex; }
+#conn-spinner {
+  width: 36px; height: 36px; border-radius: 50%;
+  border: 2px solid #1a1a1a; border-top-color: var(--accent);
+  animation: spin 0.8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+#conn-label { font-size: 12px; letter-spacing: 0.22em; color: #444; text-transform: uppercase; }
+
+/* ══════════════════════════════════════════════════════
+   STATUS BAR
+══════════════════════════════════════════════════════ */
 #status-bar {
   position: absolute;
   top: calc(var(--safe-top) + 8px);
-  left: 50%;
-  transform: translateX(-50%);
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 11px;
-  font-weight: 500;
-  letter-spacing: 0.08em;
-  color: #444;
-  text-transform: uppercase;
+  left: 50%; transform: translateX(-50%);
+  display: none; align-items: center;
+  gap: 8px; font-size: 11px; font-weight: 500;
+  letter-spacing: 0.08em; color: #444;
+  text-transform: uppercase; z-index: 10;
 }
+#status-bar.show { display: flex; }
 #status-dot {
-  width: 6px; height: 6px;
-  border-radius: 50%;
-  background: #333;
-  transition: background 0.4s;
+  width: 6px; height: 6px; border-radius: 50%;
+  background: #333; transition: background 0.4s;
 }
-#status-dot.connected { background: #2ecc71; box-shadow: 0 0 6px #2ecc71; }
+#status-dot.connected  { background: #2ecc71; box-shadow: 0 0 6px #2ecc71; }
 #status-dot.connecting { background: #f39c12; animation: pulse-dot 1s ease-in-out infinite; }
 @keyframes pulse-dot { 0%,100%{opacity:1} 50%{opacity:0.3} }
 
-/* ── CONTROLLER BODY ── */
+/* Gear icon */
+#settings-btn {
+  width: 26px; height: 26px;
+  background: none; border: none;
+  color: #3a3a3a; font-size: 15px;
+  cursor: pointer; display: flex; align-items: center; justify-content: center;
+  border-radius: 50%; transition: color 0.2s;
+  -webkit-tap-highlight-color: transparent; outline: none;
+  padding: 0; margin-left: 4px;
+}
+#settings-btn:active { color: var(--accent); }
+
+/* ══════════════════════════════════════════════════════
+   CONTROLLER
+══════════════════════════════════════════════════════ */
 #controller {
-  width: 100%;
-  max-width: 860px;
+  width: 100%; max-width: 860px;
   display: grid;
   grid-template-columns: 1fr auto 1fr;
   align-items: center;
   gap: clamp(8px, 3vw, 32px);
   padding: 0 clamp(8px, 2vw, 24px);
+  opacity: 0; pointer-events: none;
+  transition: opacity 0.5s ease;
 }
+#controller.active { opacity: 1; pointer-events: auto; }
 
-/* ── JOYSTICK ── */
-.joy-wrap {
-  display: flex;
-  justify-content: center;
-}
-
+.joy-wrap { display: flex; justify-content: center; }
 .joy-base {
-  width: var(--joy-size);
-  height: var(--joy-size);
+  width: var(--joy-size); height: var(--joy-size);
   border-radius: 50%;
-  background:
-    radial-gradient(circle at 34% 28%, #282828, #141414);
-  box-shadow:
-    inset 0 2px 6px rgba(255,255,255,0.04),
+  background: radial-gradient(circle at 34% 28%, #282828, #141414);
+  box-shadow: inset 0 2px 6px rgba(255,255,255,0.04),
     inset 0 -4px 12px rgba(0,0,0,0.9),
-    0 0 0 1px rgba(255,255,255,0.06),
-    0 12px 40px rgba(0,0,0,0.8);
-  position: relative;
-  flex-shrink: 0;
+    0 0 0 1px rgba(255,255,255,0.06), 0 12px 40px rgba(0,0,0,0.8);
+  position: relative; flex-shrink: 0;
 }
-
 .joy-ring {
-  position: absolute;
-  inset: 12%;
-  border-radius: 50%;
-  border: 1px solid rgba(255,255,255,0.04);
-  pointer-events: none;
+  position: absolute; inset: 12%; border-radius: 50%;
+  border: 1px solid rgba(255,255,255,0.04); pointer-events: none;
 }
-
 .joy-knob {
-  position: absolute;
-  width: 42%;
-  height: 42%;
-  border-radius: 50%;
-  left: 50%;
-  top: 50%;
-  transform: translate(-50%, -50%);
-  background:
-    radial-gradient(circle at 32% 28%, #666, #333 60%, #222);
-  box-shadow:
-    0 0 0 1px rgba(255,255,255,0.08),
-    0 6px 18px rgba(0,0,0,0.9),
-    inset 0 1px 3px rgba(255,255,255,0.12);
-  cursor: pointer;
-  transition: box-shadow 0.1s;
+  position: absolute; width: 42%; height: 42%; border-radius: 50%;
+  left: 50%; top: 50%; transform: translate(-50%, -50%);
+  background: radial-gradient(circle at 32% 28%, #666, #333 60%, #222);
+  box-shadow: 0 0 0 1px rgba(255,255,255,0.08),
+    0 6px 18px rgba(0,0,0,0.9), inset 0 1px 3px rgba(255,255,255,0.12);
+  cursor: pointer; transition: box-shadow 0.1s;
 }
 .joy-knob::after {
-  content: '';
-  position: absolute;
-  inset: 22%;
-  border-radius: 50%;
+  content: ''; position: absolute; inset: 22%; border-radius: 50%;
   background: radial-gradient(circle at 40% 35%, rgba(255,255,255,0.12), transparent 60%);
   pointer-events: none;
 }
 .joy-knob.active {
-  box-shadow:
-    0 0 0 1px rgba(255,255,255,0.15),
-    0 2px 8px rgba(0,0,0,0.9),
-    inset 0 2px 6px rgba(0,0,0,0.6);
+  box-shadow: 0 0 0 1px rgba(255,255,255,0.15),
+    0 2px 8px rgba(0,0,0,0.9), inset 0 2px 6px rgba(0,0,0,0.6);
 }
-
-/* ── CENTER CLUSTER ── */
-#center {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: clamp(6px, 2vw, 14px);
-}
-
-/* ABXY grid */
+#center { display: flex; flex-direction: column; align-items: center; gap: clamp(6px, 2vw, 14px); }
 #abxy {
   display: grid;
   grid-template-columns: repeat(3, var(--btn-size));
   grid-template-rows: repeat(3, var(--btn-size));
   gap: clamp(3px, 1vw, 8px);
 }
-
 .btn {
-  width: var(--btn-size);
-  height: var(--btn-size);
-  border-radius: 50%;
-  border: none;
+  width: var(--btn-size); height: var(--btn-size);
+  border-radius: 50%; border: none;
   font-family: 'Rajdhani', system-ui, sans-serif;
-  font-size: clamp(13px, 1.8vw, 18px);
-  font-weight: 700;
-  letter-spacing: 0.05em;
-  cursor: pointer;
-  position: relative;
-  overflow: hidden;
+  font-size: clamp(13px, 1.8vw, 18px); font-weight: 700;
+  letter-spacing: 0.05em; cursor: pointer;
+  position: relative; overflow: hidden;
   transition: transform 0.08s, box-shadow 0.08s;
-  -webkit-tap-highlight-color: transparent;
-  outline: none;
+  -webkit-tap-highlight-color: transparent; outline: none;
 }
-
-/* Per-button colours matching Xbox style */
-.btn.y { background: radial-gradient(circle at 40% 30%, #f5d86a, #c9a000); color: #3a2800; box-shadow: 0 6px 18px rgba(180,140,0,0.5), inset 0 1px 2px rgba(255,255,255,0.3); }
-.btn.x { background: radial-gradient(circle at 40% 30%, #5aabff, #0069cb); color: #002a52; box-shadow: 0 6px 18px rgba(0,105,200,0.5), inset 0 1px 2px rgba(255,255,255,0.3); }
-.btn.b { background: radial-gradient(circle at 40% 30%, #ff6e6e, #cc1c1c); color: #420000; box-shadow: 0 6px 18px rgba(200,20,20,0.5), inset 0 1px 2px rgba(255,255,255,0.3); }
-.btn.a { background: radial-gradient(circle at 40% 30%, #5ed97e, #1a8c38); color: #002a11; box-shadow: 0 6px 18px rgba(20,140,50,0.5), inset 0 1px 2px rgba(255,255,255,0.3); }
-
+.btn.y { background: radial-gradient(circle at 40% 30%, #f5d86a, #c9a000); color: #3a2800; box-shadow: 0 6px 18px rgba(180,140,0,0.5),  inset 0 1px 2px rgba(255,255,255,0.3); }
+.btn.x { background: radial-gradient(circle at 40% 30%, #5aabff, #0069cb); color: #002a52; box-shadow: 0 6px 18px rgba(0,105,200,0.5),   inset 0 1px 2px rgba(255,255,255,0.3); }
+.btn.b { background: radial-gradient(circle at 40% 30%, #ff6e6e, #cc1c1c); color: #420000; box-shadow: 0 6px 18px rgba(200,20,20,0.5),   inset 0 1px 2px rgba(255,255,255,0.3); }
+.btn.a { background: radial-gradient(circle at 40% 30%, #5ed97e, #1a8c38); color: #002a11; box-shadow: 0 6px 18px rgba(20,140,50,0.5),   inset 0 1px 2px rgba(255,255,255,0.3); }
 .btn.pressed {
   transform: scale(0.88);
   box-shadow: 0 2px 6px rgba(0,0,0,0.8), inset 0 3px 8px rgba(0,0,0,0.6) !important;
 }
-
-/* Logo / home button area */
-#logo-area {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
+#logo-area { display: flex; align-items: center; gap: 10px; }
 .small-btn {
-  width: 28px; height: 28px;
-  border-radius: 50%;
-  background: #1a1a1a;
-  border: 1px solid rgba(255,255,255,0.08);
+  width: 28px; height: 28px; border-radius: 50%;
+  background: #1a1a1a; border: 1px solid rgba(255,255,255,0.08);
   display: flex; align-items: center; justify-content: center;
-  font-size: 11px;
-  color: #555;
-  cursor: pointer;
-  font-family: 'Rajdhani', system-ui, sans-serif;
-  font-weight: 700;
+  font-size: 11px; color: #555; cursor: pointer;
+  font-family: 'Rajdhani', system-ui, sans-serif; font-weight: 700;
 }
 #home-btn {
   width: 36px; height: 36px;
   background: radial-gradient(circle at 35% 30%, #2a2a2a, #111);
-  border: 1px solid rgba(255,255,255,0.1);
-  border-radius: 50%;
-  display: flex; align-items: center; justify-content: center;
-  cursor: pointer;
+  border: 1px solid rgba(255,255,255,0.1); border-radius: 50%;
+  display: flex; align-items: center; justify-content: center; cursor: pointer;
 }
 #home-logo {
-  width: 16px; height: 16px;
-  fill: none;
-  stroke: rgba(255,255,255,0.4);
-  stroke-width: 1.5;
-  stroke-linecap: round;
-  stroke-linejoin: round;
+  width: 16px; height: 16px; fill: none;
+  stroke: rgba(255,255,255,0.4); stroke-width: 1.5;
+  stroke-linecap: round; stroke-linejoin: round;
 }
-
-/* ── PLACEHOLDER CELLS (empty grid spots) ── */
 .empty { background: transparent; pointer-events: none; }
 
-/* ── QR OVERLAY ── */
-#qr-overlay {
-  display: none;
-  position: fixed;
-  inset: 0;
-  background: rgba(0,0,0,0.85);
-  z-index: 100;
-  align-items: center;
-  justify-content: center;
-  flex-direction: column;
-  gap: 16px;
+/* ══════════════════════════════════════════════════════
+   SETTINGS BACKDROP
+══════════════════════════════════════════════════════ */
+#settings-backdrop {
+  position: fixed; inset: 0; z-index: 70;
+  background: rgba(0,0,0,0.65);
+  opacity: 0; pointer-events: none;
+  transition: opacity 0.32s ease;
 }
-#qr-overlay.show { display: flex; }
-#qr-close {
-  color: #aaa;
-  font-size: 14px;
-  letter-spacing: 0.1em;
+#settings-backdrop.show { opacity: 1; pointer-events: auto; }
+
+/* ══════════════════════════════════════════════════════
+   SETTINGS DRAWER
+══════════════════════════════════════════════════════ */
+#settings-drawer {
+  position: fixed; bottom: 0; left: 0; right: 0; z-index: 75;
+  background: var(--sheet-bg);
+  border-radius: 20px 20px 0 0;
+  padding: 0 20px calc(var(--safe-bottom) + 28px);
+  max-height: 88dvh;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  transform: translateY(100%);
+  transition: transform 0.36s cubic-bezier(0.32, 0.72, 0, 1);
+  border-top: 1px solid rgba(255,255,255,0.06);
+}
+#settings-drawer.open { transform: translateY(0); }
+
+#settings-handle {
+  width: 36px; height: 4px; border-radius: 2px;
+  background: rgba(255,255,255,0.12);
+  margin: 14px auto 0; flex-shrink: 0;
+}
+#settings-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 18px 0 14px;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+  margin-bottom: 6px;
+}
+#settings-title {
+  font-size: 16px; font-weight: 700;
+  letter-spacing: 0.12em; color: #ccc;
   text-transform: uppercase;
-  cursor: pointer;
-  padding: 8px 20px;
-  border: 1px solid #333;
-  border-radius: 6px;
-  background: #111;
 }
-#qr-text {
-  color: #aaa;
-  font-size: 13px;
-  letter-spacing: 0.05em;
-  max-width: 240px;
-  text-align: center;
-  line-height: 1.6;
+#settings-close {
+  width: 30px; height: 30px; border-radius: 50%;
+  background: rgba(255,255,255,0.07); border: none;
+  color: #777; font-size: 14px; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  -webkit-tap-highlight-color: transparent; outline: none;
+  transition: background 0.15s;
+}
+#settings-close:active { background: rgba(255,255,255,0.14); }
+
+/* ── Settings sections ── */
+.settings-section {
+  background: var(--section-bg);
+  border-radius: 12px;
+  padding: 16px;
+  margin-top: 12px;
+}
+.settings-section-label {
+  display: flex; justify-content: space-between; align-items: baseline;
+  margin-bottom: 14px;
+}
+.settings-section-title {
+  font-size: 12px; font-weight: 700;
+  letter-spacing: 0.18em; color: #555;
+  text-transform: uppercase;
+}
+.settings-value {
+  font-size: 13px; font-weight: 700;
+  letter-spacing: 0.06em; color: var(--accent);
 }
 
-/* ── LANDSCAPE LAYOUT ── */
+/* ── Range slider ── */
+.settings-slider {
+  -webkit-appearance: none; appearance: none;
+  width: 100%; height: 4px;
+  background: #2a2a2a; border-radius: 2px; outline: none;
+  cursor: pointer;
+}
+.settings-slider::-webkit-slider-runnable-track {
+  height: 4px; border-radius: 2px; background: #2a2a2a;
+}
+.settings-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 24px; height: 24px; border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 0 3px rgba(0,200,255,0.15), 0 2px 8px rgba(0,0,0,0.6);
+  margin-top: -10px;
+  cursor: pointer;
+  transition: box-shadow 0.15s;
+}
+.settings-slider:active::-webkit-slider-thumb {
+  box-shadow: 0 0 0 6px rgba(0,200,255,0.2), 0 2px 8px rgba(0,0,0,0.6);
+}
+
+/* Slider track fill — JS-driven via background gradient */
+.settings-slider {
+  background: linear-gradient(to right, var(--accent) 0%, #2a2a2a 0%);
+}
+
+/* ── Button remap list ── */
+.remap-list { display: flex; flex-direction: column; gap: 4px; }
+
+.remap-row {
+  display: flex; align-items: center; gap: 14px;
+  padding: 11px 10px; border-radius: 10px;
+  cursor: pointer; transition: background 0.15s;
+  -webkit-tap-highlight-color: transparent;
+}
+.remap-row:active { background: rgba(255,255,255,0.05); }
+
+.remap-circle {
+  width: 36px; height: 36px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 14px; font-weight: 700; flex-shrink: 0;
+}
+.remap-circle.y { background: radial-gradient(circle at 38% 30%, #f5d86a, #c9a000); color: #3a2800; }
+.remap-circle.x { background: radial-gradient(circle at 38% 30%, #5aabff, #0069cb); color: #002a52; }
+.remap-circle.b { background: radial-gradient(circle at 38% 30%, #ff6e6e, #cc1c1c); color: #420000; }
+.remap-circle.a { background: radial-gradient(circle at 38% 30%, #5ed97e, #1a8c38); color: #002a11; }
+
+.remap-label {
+  flex: 1;
+  font-size: 13px; font-weight: 700; letter-spacing: 0.08em; color: #888;
+  text-transform: uppercase;
+}
+.remap-key-badge {
+  font-size: 13px; font-weight: 700; letter-spacing: 0.06em;
+  color: #ccc; background: rgba(255,255,255,0.07);
+  padding: 4px 12px; border-radius: 6px;
+  border: 1px solid rgba(255,255,255,0.08);
+  min-width: 52px; text-align: center;
+  text-transform: uppercase;
+}
+.remap-chevron { color: #333; font-size: 13px; }
+
+/* ── Section subtitle for sliders ── */
+.settings-hint {
+  font-size: 10px; letter-spacing: 0.08em; color: #333;
+  margin-top: 10px;
+  text-transform: uppercase;
+}
+
+/* ══════════════════════════════════════════════════════
+   KEY PICKER
+══════════════════════════════════════════════════════ */
+#key-picker-backdrop {
+  position: fixed; inset: 0; z-index: 78;
+  background: rgba(0,0,0,0.5);
+  opacity: 0; pointer-events: none;
+  transition: opacity 0.25s ease;
+}
+#key-picker-backdrop.show { opacity: 1; pointer-events: auto; }
+
+#key-picker {
+  position: fixed; bottom: 0; left: 0; right: 0; z-index: 80;
+  background: #161619;
+  border-radius: 20px 20px 0 0;
+  padding: 0 16px calc(var(--safe-bottom) + 24px);
+  transform: translateY(100%);
+  transition: transform 0.3s cubic-bezier(0.32, 0.72, 0, 1);
+  border-top: 1px solid rgba(255,255,255,0.06);
+}
+#key-picker.open { transform: translateY(0); }
+
+#key-picker-handle {
+  width: 36px; height: 4px; border-radius: 2px;
+  background: rgba(255,255,255,0.1);
+  margin: 14px auto 0;
+}
+#key-picker-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 16px 0 14px;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+  margin-bottom: 16px;
+}
+#key-picker-title {
+  font-size: 13px; font-weight: 500; letter-spacing: 0.18em;
+  color: #555; text-transform: uppercase;
+}
+#key-picker-btn-badge {
+  width: 32px; height: 32px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 13px; font-weight: 700;
+}
+#key-picker-cancel {
+  font-size: 12px; letter-spacing: 0.12em; color: #444;
+  text-transform: uppercase; cursor: pointer;
+  background: none; border: none; outline: none;
+  padding: 6px; -webkit-tap-highlight-color: transparent;
+}
+
+/* Key group */
+.key-group-label {
+  font-size: 9px; letter-spacing: 0.28em; color: #333;
+  text-transform: uppercase; margin: 14px 0 8px;
+}
+.key-group {
+  display: flex; flex-wrap: wrap; gap: 6px;
+}
+.key-pill {
+  font-family: 'Rajdhani', system-ui, sans-serif;
+  font-size: 13px; font-weight: 700; letter-spacing: 0.06em;
+  color: #777; background: #1e1e22;
+  border: 1px solid rgba(255,255,255,0.07); border-radius: 8px;
+  padding: 8px 14px; cursor: pointer; text-transform: uppercase;
+  transition: background 0.12s, color 0.12s, border-color 0.12s;
+  -webkit-tap-highlight-color: transparent; outline: none;
+}
+.key-pill:active { background: var(--accent-dim); }
+.key-pill.selected {
+  background: var(--accent-dim);
+  color: var(--accent);
+  border-color: rgba(0,200,255,0.35);
+}
+
+/* ── Responsive ── */
 @media (orientation: landscape) {
-  :root {
-    --joy-size: min(140px, 20vh);
-    --btn-size: min(52px, 7.5vh);
-  }
+  :root { --joy-size: min(140px,20vh); --btn-size: min(52px,7.5vh); }
   body { justify-content: center; }
 }
-
-/* ── PORTRAIT COMPACT ── */
 @media (orientation: portrait) {
-  :root {
-    --joy-size: min(150px, 38vw);
-    --btn-size: min(58px, 13vw);
-  }
-  #controller {
-    grid-template-columns: 1fr 1fr;
-    grid-template-rows: auto auto;
-    max-width: 440px;
-  }
-  #center {
-    grid-column: 1 / span 2;
-    order: -1;
-  }
-  .joy-wrap:first-child { justify-content: flex-start; padding-left: 8px; }
-  .joy-wrap:last-child { justify-content: flex-end; padding-right: 8px; }
+  :root { --joy-size: min(150px,38vw); --btn-size: min(58px,13vw); }
+  #controller { grid-template-columns: 1fr 1fr; grid-template-rows: auto auto; max-width: 440px; }
+  #center { grid-column: 1 / span 2; order: -1; }
+  .joy-wrap:first-child { justify-content: flex-start; padding-left:  8px; }
+  .joy-wrap:last-child  { justify-content: flex-end;   padding-right: 8px; }
 }
 </style>
 </head>
 <body>
 
-<!-- Status bar -->
+<!-- ══ PRESS START SCREEN ══════════════════════════════════════════════════ -->
+<div id="start-screen">
+  <div id="ss-app-label">Cloud Controller</div>
+  <div id="ss-room-card">
+    <div id="ss-room-eyebrow">Room</div>
+    <div id="ss-room-code">—</div>
+  </div>
+  <div id="ss-input-card">
+    <div id="ss-input-eyebrow">Enter Room Code</div>
+    <input id="ss-input" type="text" placeholder="TIGER-42" maxlength="12"
+      autocomplete="off" autocorrect="off" autocapitalize="characters"
+      spellcheck="false" inputmode="text"/>
+    <div id="ss-input-error"></div>
+  </div>
+  <button id="ss-start-btn">PRESS START</button>
+  <div id="ss-hint">Scan the QR code from the PC app<br>or enter the room code above</div>
+</div>
+
+<!-- ══ CONNECTING OVERLAY ══════════════════════════════════════════════════ -->
+<div id="connecting-overlay">
+  <div id="conn-spinner"></div>
+  <div id="conn-label">Connecting…</div>
+</div>
+
+<!-- ══ STATUS BAR ══════════════════════════════════════════════════════════ -->
 <div id="status-bar">
   <div id="status-dot" class="connecting"></div>
   <span id="status-text">Connecting…</span>
+  <button id="settings-btn" aria-label="Settings">⚙</button>
 </div>
 
-<!-- Main controller -->
+<!-- ══ CONTROLLER ══════════════════════════════════════════════════════════ -->
 <div id="controller">
-
-  <!-- Left joystick -->
   <div class="joy-wrap">
     <div class="joy-base" id="leftBase">
       <div class="joy-ring"></div>
       <div class="joy-knob" id="leftKnob"></div>
     </div>
   </div>
-
-  <!-- Center cluster -->
   <div id="center">
-    <!-- Logo row -->
     <div id="logo-area">
       <div class="small-btn" id="btn-select">⧉</div>
       <div id="home-btn">
@@ -315,10 +571,8 @@ body {
           <circle cx="12" cy="12" r="3.5"/>
         </svg>
       </div>
-      <div class="small-btn" id="btn-start">≡</div>
+      <div class="small-btn" id="btn-start-ctrl">≡</div>
     </div>
-
-    <!-- ABXY -->
     <div id="abxy">
       <div class="empty"></div>
       <button class="btn y" data-key="Y">Y</button>
@@ -331,73 +585,430 @@ body {
       <div class="empty"></div>
     </div>
   </div>
-
-  <!-- Right joystick -->
   <div class="joy-wrap">
     <div class="joy-base" id="rightBase">
       <div class="joy-ring"></div>
       <div class="joy-knob" id="rightKnob"></div>
     </div>
   </div>
-
 </div>
 
-<!-- QR overlay (for share) -->
-<div id="qr-overlay">
-  <div id="qr-text">Scan this QR code to open the controller on another device</div>
-  <canvas id="qr-canvas" width="200" height="200"></canvas>
-  <div id="qr-close" onclick="document.getElementById('qr-overlay').classList.remove('show')">Close</div>
+<!-- ══ SETTINGS BACKDROP ══════════════════════════════════════════════════ -->
+<div id="settings-backdrop"></div>
+
+<!-- ══ SETTINGS DRAWER ════════════════════════════════════════════════════ -->
+<div id="settings-drawer">
+  <div id="settings-handle"></div>
+  <div id="settings-header">
+    <span id="settings-title">Settings</span>
+    <button id="settings-close">✕</button>
+  </div>
+
+  <!-- Mouse Sensitivity -->
+  <div class="settings-section">
+    <div class="settings-section-label">
+      <span class="settings-section-title">Mouse Sensitivity</span>
+      <span class="settings-value" id="sens-display">5</span>
+    </div>
+    <input type="range" class="settings-slider" id="sens-slider"
+      min="1" max="10" step="0.5" value="5">
+    <div class="settings-hint">Controls camera / look speed · Right joystick</div>
+  </div>
+
+  <!-- Dead-zone -->
+  <div class="settings-section">
+    <div class="settings-section-label">
+      <span class="settings-section-title">Joystick Dead-zone</span>
+      <span class="settings-value" id="dz-display">8%</span>
+    </div>
+    <input type="range" class="settings-slider" id="dz-slider"
+      min="0" max="30" step="1" value="8">
+    <div class="settings-hint">Minimum tilt before input registers · Both joysticks</div>
+  </div>
+
+  <!-- Button Mapping -->
+  <div class="settings-section">
+    <div class="settings-section-label">
+      <span class="settings-section-title">Button Mapping</span>
+    </div>
+    <div class="remap-list">
+      <div class="remap-row" data-remap="Y">
+        <div class="remap-circle y">Y</div>
+        <div class="remap-label">Y Button</div>
+        <div class="remap-key-badge" id="remap-display-Y">F</div>
+        <div class="remap-chevron">›</div>
+      </div>
+      <div class="remap-row" data-remap="X">
+        <div class="remap-circle x">X</div>
+        <div class="remap-label">X Button</div>
+        <div class="remap-key-badge" id="remap-display-X">R</div>
+        <div class="remap-chevron">›</div>
+      </div>
+      <div class="remap-row" data-remap="B">
+        <div class="remap-circle b">B</div>
+        <div class="remap-label">B Button</div>
+        <div class="remap-key-badge" id="remap-display-B">E</div>
+        <div class="remap-chevron">›</div>
+      </div>
+      <div class="remap-row" data-remap="A">
+        <div class="remap-circle a">A</div>
+        <div class="remap-label">A Button</div>
+        <div class="remap-key-badge" id="remap-display-A">Space</div>
+        <div class="remap-chevron">›</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ KEY PICKER ══════════════════════════════════════════════════════════ -->
+<div id="key-picker-backdrop"></div>
+<div id="key-picker">
+  <div id="key-picker-handle"></div>
+  <div id="key-picker-header">
+    <span id="key-picker-title">Assign key</span>
+    <div id="key-picker-btn-badge"></div>
+    <button id="key-picker-cancel">Cancel</button>
+  </div>
+  <div id="key-picker-body"></div>
 </div>
 
 <script>
-/* ───────────────────────────────
+/* ═══════════════════════════════════════════════════
+   AVAILABLE KEYS  for the picker
+═══════════════════════════════════════════════════ */
+const KEY_GROUPS = [
+  {
+    label: 'Common',
+    keys: [
+      { display: 'Space',  value: 'space'  },
+      { display: 'Enter',  value: 'enter'  },
+      { display: 'Shift',  value: 'shift'  },
+      { display: 'Ctrl',   value: 'ctrl'   },
+      { display: 'Alt',    value: 'alt'    },
+      { display: 'Tab',    value: 'tab'    },
+      { display: 'Esc',    value: 'esc'    },
+    ]
+  },
+  {
+    label: 'Letters',
+    keys: [
+      ...'EQRFTGCVZHNM'.split('').map(k => ({ display: k, value: k.toLowerCase() }))
+    ]
+  },
+  {
+    label: 'Numbers',
+    keys: [
+      ...'1234567890'.split('').map(k => ({ display: k, value: k }))
+    ]
+  },
+  {
+    label: 'Function',
+    keys: [
+      { display: 'F1', value: 'f1' },{ display: 'F2', value: 'f2' },
+      { display: 'F3', value: 'f3' },{ display: 'F4', value: 'f4' },
+      { display: 'F5', value: 'f5' },{ display: 'F6', value: 'f6' },
+    ]
+  }
+];
+
+/* Pretty display name for a key value */
+function keyDisplayName(val) {
+  const map = {
+    space:'Space', enter:'Enter', shift:'Shift', ctrl:'Ctrl',
+    alt:'Alt', tab:'Tab', esc:'Esc',
+    f1:'F1', f2:'F2', f3:'F3', f4:'F4', f5:'F5', f6:'F6'
+  };
+  return map[val] || val.toUpperCase();
+}
+
+/* ═══════════════════════════════════════════════════
+   SETTINGS STATE
+═══════════════════════════════════════════════════ */
+const DEFAULT_SETTINGS = {
+  sensitivity:  5,
+  deadzone:     8,
+  buttonMap: { A: 'space', B: 'e', X: 'r', Y: 'f' }
+};
+
+let settings = JSON.parse(JSON.stringify(DEFAULT_SETTINGS));  // deep copy
+
+function loadSettings() {
+  try {
+    const saved = JSON.parse(localStorage.getItem('ctrl-v2-settings'));
+    if (saved) {
+      settings.sensitivity = saved.sensitivity ?? DEFAULT_SETTINGS.sensitivity;
+      settings.deadzone    = saved.deadzone    ?? DEFAULT_SETTINGS.deadzone;
+      if (saved.buttonMap) Object.assign(settings.buttonMap, saved.buttonMap);
+    }
+  } catch { /* use defaults */ }
+}
+
+function saveSettings() {
+  try { localStorage.setItem('ctrl-v2-settings', JSON.stringify(settings)); }
+  catch { /* storage unavailable */ }
+}
+
+loadSettings();
+
+/* ═══════════════════════════════════════════════════
+   SEND CONFIG TO PC CLIENT
+═══════════════════════════════════════════════════ */
+function sendConfig() {
+  if (socket && socket.readyState === WebSocket.OPEN && hasJoined) {
+    socket.send(JSON.stringify({
+      type:            'config',
+      buttonMap:       settings.buttonMap,
+      mouseSensitivity: settings.sensitivity
+    }));
+  }
+}
+
+/* ═══════════════════════════════════════════════════
+   SETTINGS DRAWER
+═══════════════════════════════════════════════════ */
+const settingsDrawer   = document.getElementById('settings-drawer');
+const settingsBackdrop = document.getElementById('settings-backdrop');
+const sensSlider       = document.getElementById('sens-slider');
+const sensDisplay      = document.getElementById('sens-display');
+const dzSlider         = document.getElementById('dz-slider');
+const dzDisplay        = document.getElementById('dz-display');
+
+/* Sync slider visuals to current settings on load */
+function syncSliderUI(slider, value) {
+  const min = +slider.min, max = +slider.max;
+  const pct = ((value - min) / (max - min)) * 100;
+  slider.value = value;
+  slider.style.background =
+    `linear-gradient(to right, var(--accent) ${pct}%, #2a2a2a ${pct}%)`;
+}
+
+function initSettingsUI() {
+  syncSliderUI(sensSlider, settings.sensitivity);
+  syncSliderUI(dzSlider,   settings.deadzone);
+  sensDisplay.textContent = settings.sensitivity;
+  dzDisplay.textContent   = settings.deadzone + '%';
+  updateRemapDisplay();
+}
+
+function openSettings() {
+  haptic(8);
+  settingsBackdrop.classList.add('show');
+  settingsDrawer.classList.add('open');
+}
+function closeSettings() {
+  settingsBackdrop.classList.remove('show');
+  settingsDrawer.classList.remove('open');
+}
+
+document.getElementById('settings-btn').addEventListener('pointerdown', e => {
+  e.stopPropagation();
+  openSettings();
+}, { passive: true });
+
+document.getElementById('settings-close').addEventListener('pointerdown', e => {
+  e.stopPropagation(); closeSettings();
+}, { passive: true });
+
+settingsBackdrop.addEventListener('pointerdown', closeSettings, { passive: true });
+
+/* Sensitivity slider */
+sensSlider.addEventListener('input', () => {
+  const v = +sensSlider.value;
+  settings.sensitivity = v;
+  sensDisplay.textContent = v % 1 === 0 ? v : v.toFixed(1);
+  syncSliderUI(sensSlider, v);
+  saveSettings();
+  sendConfig();
+});
+
+/* Dead-zone slider */
+dzSlider.addEventListener('input', () => {
+  const v = +dzSlider.value;
+  settings.deadzone = v;
+  dzDisplay.textContent = v + '%';
+  syncSliderUI(dzSlider, v);
+  saveSettings();
+  // deadzone is applied phone-side, no config message needed
+});
+
+initSettingsUI();
+
+/* ═══════════════════════════════════════════════════
+   KEY PICKER
+═══════════════════════════════════════════════════ */
+const keyPicker         = document.getElementById('key-picker');
+const keyPickerBackdrop = document.getElementById('key-picker-backdrop');
+const keyPickerBody     = document.getElementById('key-picker-body');
+const keyPickerTitle    = document.getElementById('key-picker-title');
+const keyPickerBadge    = document.getElementById('key-picker-btn-badge');
+
+let remapTarget = null;   // which button (A/B/X/Y) is being remapped
+
+/* Build key picker DOM once */
+(function buildKeyPicker() {
+  KEY_GROUPS.forEach(group => {
+    const labelEl = document.createElement('div');
+    labelEl.className = 'key-group-label';
+    labelEl.textContent = group.label;
+    keyPickerBody.appendChild(labelEl);
+
+    const rowEl = document.createElement('div');
+    rowEl.className = 'key-group';
+    group.keys.forEach(k => {
+      const pill = document.createElement('button');
+      pill.className = 'key-pill';
+      pill.textContent = k.display;
+      pill.dataset.value = k.value;
+      pill.addEventListener('pointerdown', e => {
+        e.stopPropagation();
+        haptic(12);
+        assignKey(remapTarget, k.value);
+        closeKeyPicker();
+      }, { passive: true });
+      rowEl.appendChild(pill);
+    });
+    keyPickerBody.appendChild(rowEl);
+  });
+})();
+
+function openKeyPicker(btn) {
+  remapTarget = btn;
+  haptic(8);
+
+  // Update header badge colour
+  const colours = { A:'#1a8c38', B:'#cc1c1c', X:'#0069cb', Y:'#c9a000' };
+  keyPickerBadge.style.background = colours[btn] || '#333';
+  keyPickerBadge.style.color = '#fff';
+  keyPickerBadge.textContent = btn;
+  keyPickerTitle.textContent = `Assign · `;
+
+  // Highlight current assignment
+  const current = settings.buttonMap[btn];
+  keyPickerBody.querySelectorAll('.key-pill').forEach(pill => {
+    pill.classList.toggle('selected', pill.dataset.value === current);
+  });
+
+  keyPickerBackdrop.classList.add('show');
+  keyPicker.classList.add('open');
+}
+
+function closeKeyPicker() {
+  keyPickerBackdrop.classList.remove('show');
+  keyPicker.classList.remove('open');
+}
+
+function assignKey(btn, value) {
+  settings.buttonMap[btn] = value;
+  saveSettings();
+  updateRemapDisplay();
+  sendConfig();
+}
+
+function updateRemapDisplay() {
+  ['A','B','X','Y'].forEach(btn => {
+    const el = document.getElementById(`remap-display-${btn}`);
+    if (el) el.textContent = keyDisplayName(settings.buttonMap[btn] || '?');
+  });
+}
+
+/* Remap row tap handlers */
+document.querySelectorAll('.remap-row[data-remap]').forEach(row => {
+  row.addEventListener('pointerdown', e => {
+    e.stopPropagation();
+    openKeyPicker(row.dataset.remap);
+  }, { passive: true });
+});
+
+keyPickerBackdrop.addEventListener('pointerdown', closeKeyPicker, { passive: true });
+document.getElementById('key-picker-cancel').addEventListener('pointerdown', e => {
+  e.stopPropagation(); closeKeyPicker();
+}, { passive: true });
+
+/* ═══════════════════════════════════════════════════
+   START SCREEN
+═══════════════════════════════════════════════════ */
+const WS_URL    = 'wss://controller-cloud.onrender.com/';
+const urlParams = new URLSearchParams(window.location.search);
+let   activeRoom = (urlParams.get('room') || '').trim().toUpperCase() || null;
+let   hasJoined  = false;
+
+const startScreen       = document.getElementById('start-screen');
+const ssRoomCard        = document.getElementById('ss-room-card');
+const ssRoomCodeEl      = document.getElementById('ss-room-code');
+const ssInputCard       = document.getElementById('ss-input-card');
+const ssInput           = document.getElementById('ss-input');
+const ssInputError      = document.getElementById('ss-input-error');
+const ssStartBtn        = document.getElementById('ss-start-btn');
+const connectingOverlay = document.getElementById('connecting-overlay');
+const connLabel         = document.getElementById('conn-label');
+
+(function initStartScreen() {
+  if (activeRoom) {
+    ssRoomCodeEl.textContent = activeRoom;
+    ssRoomCard.style.display  = 'block';
+    ssInputCard.style.display = 'none';
+    document.getElementById('ss-hint').innerHTML = 'Tap to connect to your PC';
+  } else {
+    ssRoomCard.style.display  = 'none';
+    ssInputCard.style.display = 'flex';
+    ssStartBtn.textContent    = 'CONNECT';
+  }
+})();
+
+ssStartBtn.addEventListener('pointerdown', e => {
+  e.preventDefault();
+  haptic(20);
+  if (!activeRoom) {
+    const typed = ssInput.value.trim().toUpperCase();
+    if (!typed || typed.length < 3) {
+      ssInputError.textContent = 'Enter a valid room code';
+      ssInputCard.classList.add('shake');
+      ssInputCard.addEventListener('animationend', () =>
+        ssInputCard.classList.remove('shake'), { once: true });
+      haptic([10, 50, 10]);
+      return;
+    }
+    activeRoom = typed;
+    ssInputError.textContent = '';
+  }
+  startScreen.classList.add('fade-out');
+  setTimeout(() => { startScreen.style.display = 'none'; }, 450);
+  connectingOverlay.classList.add('show');
+  connectCloud();
+});
+
+ssInput.addEventListener('keydown', e => {
+  if (e.key === 'Enter') ssStartBtn.dispatchEvent(new PointerEvent('pointerdown'));
+});
+
+/* ═══════════════════════════════════════════════════
    HAPTICS
-─────────────────────────────── */
+═══════════════════════════════════════════════════ */
 function haptic(ms = 10) {
   if ('vibrate' in navigator) navigator.vibrate(ms);
 }
 
-/* ───────────────────────────────
-   WEBSOCKET + AUTO RECONNECT
-─────────────────────────────── */
-const WS_URL = 'wss://controller-cloud.onrender.com/';
-let socket = null;
-let reconnectTimer = null;
-
-const dot = document.getElementById('status-dot');
+/* ═══════════════════════════════════════════════════
+   STATUS BAR
+═══════════════════════════════════════════════════ */
+const statusBar  = document.getElementById('status-bar');
+const statusDot  = document.getElementById('status-dot');
 const statusText = document.getElementById('status-text');
 
 function setStatus(state, label) {
-  dot.className = state; // '', 'connecting', 'connected'
+  statusDot.className    = state;
   statusText.textContent = label;
 }
 
-function connectCloud() {
-  setStatus('connecting', 'Connecting…');
-  try { socket = new WebSocket(WS_URL); } catch(e) { retry(); return; }
-
-  socket.onopen  = () => setStatus('connected', 'Connected');
-  socket.onclose = () => { setStatus('', 'Disconnected'); retry(); };
-  socket.onerror = () => { socket.close(); };
-}
-
-function retry() {
-  clearTimeout(reconnectTimer);
-  reconnectTimer = setTimeout(connectCloud, 2500);
-}
-
-connectCloud();
-
-/* ───────────────────────────────
+/* ═══════════════════════════════════════════════════
    CONTROLLER STATE
-─────────────────────────────── */
+═══════════════════════════════════════════════════ */
 const state = {
   leftJoy:  { x: 0, y: 0 },
   rightJoy: { x: 0, y: 0 },
   buttons:  { A: false, B: false, X: false, Y: false }
 };
 
-// Throttle sends to ~60fps
 let lastSend = 0;
 function sendState() {
   const now = performance.now();
@@ -408,13 +1019,66 @@ function sendState() {
   }
 }
 
-/* ───────────────────────────────
-   JOYSTICKS — pointer-math safe
-   (no transform:scale on bases)
-─────────────────────────────── */
+/* ═══════════════════════════════════════════════════
+   WEBSOCKET + AUTO-RECONNECT
+═══════════════════════════════════════════════════ */
+let socket         = null;
+let reconnectTimer = null;
+let reconnectCount = 0;
+
+function connectCloud() {
+  setStatus('connecting', 'Connecting…');
+  connLabel.textContent = 'Connecting…';
+  try { socket = new WebSocket(WS_URL); }
+  catch(e) { scheduleReconnect(); return; }
+
+  socket.onopen = () => {
+    socket.send(JSON.stringify({ type: 'join', room: activeRoom, role: 'phone' }));
+    connLabel.textContent = 'Joining room…';
+    setStatus('connecting', 'Joining…');
+  };
+
+  socket.onmessage = e => {
+    let msg;
+    try { msg = JSON.parse(e.data); } catch { return; }
+    if (msg.type === 'joined') { onJoined(msg.room); return; }
+    // Future: handle rumble/feedback from PC here
+  };
+
+  socket.onclose = () => {
+    setStatus('', 'Disconnected');
+    if (hasJoined) { setStatus('connecting', 'Reconnecting…'); }
+    else { connLabel.textContent = 'Reconnecting…'; }
+    scheduleReconnect();
+  };
+  socket.onerror = () => { socket.close(); };
+}
+
+function onJoined(room) {
+  hasJoined = true;
+  reconnectCount = 0;
+  connectingOverlay.classList.remove('show');
+  statusBar.classList.add('show');
+  setStatus('connected', `Room ${room}`);
+  document.getElementById('controller').classList.add('active');
+  haptic([10, 30, 10]);
+  // Send current settings to PC immediately after joining
+  sendConfig();
+}
+
+function scheduleReconnect() {
+  clearTimeout(reconnectTimer);
+  const delay = Math.min(1000 * Math.pow(1.8, reconnectCount), 20000);
+  reconnectCount++;
+  reconnectTimer = setTimeout(connectCloud, delay);
+}
+
+/* ═══════════════════════════════════════════════════
+   JOYSTICKS
+   Dead-zone read dynamically from settings on every move
+═══════════════════════════════════════════════════ */
 function setupJoystick(baseEl, knobEl, stateKey) {
   let activePointer = null;
-  const DEAD = 0.08; // dead-zone fraction
 
   function getRect() { return baseEl.getBoundingClientRect(); }
 
@@ -428,36 +1092,29 @@ function setupJoystick(baseEl, knobEl, stateKey) {
 
   knobEl.addEventListener('pointermove', e => {
     if (e.pointerId !== activePointer) return;
+    const r    = getRect();
+    const cx   = r.left + r.width  / 2;
+    const cy   = r.top  + r.height / 2;
+    const maxR = r.width / 2 * 0.72;
+    const dx   = e.clientX - cx;
+    const dy   = e.clientY - cy;
+    const dist = Math.sqrt(dx*dx + dy*dy);
+    const cl   = Math.min(dist, maxR);
+    const ang  = Math.atan2(dy, dx);
+    const fx   = cl * Math.cos(ang);
+    const fy   = cl * Math.sin(ang);
 
-    const r = getRect();
-    const cx = r.left + r.width  / 2;
-    const cy = r.top  + r.height / 2;
-    const maxR = r.width / 2 * 0.72; // knob travel radius
-
-    const dx = e.clientX - cx;
-    const dy = e.clientY - cy;
-    const dist = Math.sqrt(dx * dx + dy * dy);
-    const clampedDist = Math.min(dist, maxR);
-    const angle = Math.atan2(dy, dx);
-
-    const fx = clampedDist * Math.cos(angle);
-    const fy = clampedDist * Math.sin(angle);
-
-    // Position knob visually (relative to base center)
     knobEl.style.left = `${r.width  / 2 + fx}px`;
     knobEl.style.top  = `${r.height / 2 + fy}px`;
 
+    // Read dead-zone dynamically from settings
+    const DEAD = settings.deadzone / 100;
     let nx = fx / maxR;
     let ny = fy / maxR;
-
-    // Apply dead-zone
     if (Math.abs(nx) < DEAD) nx = 0;
     if (Math.abs(ny) < DEAD) ny = 0;
 
-    state[stateKey] = {
-      x: +nx.toFixed(2),
-      y: +ny.toFixed(2)
-    };
+    state[stateKey] = { x: +nx.toFixed(2), y: +ny.toFixed(2) };
     sendState();
   }, { passive: true });
 
@@ -470,7 +1127,6 @@ function setupJoystick(baseEl, knobEl, stateKey) {
     state[stateKey] = { x: 0, y: 0 };
     sendState();
   }
-
   knobEl.addEventListener('pointerup',     resetKnob, { passive: true });
   knobEl.addEventListener('pointercancel', resetKnob, { passive: true });
 }
@@ -486,9 +1142,9 @@ setupJoystick(
   'rightJoy'
 );
 
-/* ───────────────────────────────
+/* ═══════════════════════════════════════════════════
    ABXY BUTTONS
-─────────────────────────────── */
+═══════════════════════════════════════════════════ */
 document.querySelectorAll('.btn[data-key]').forEach(btn => {
   let activePointer = null;
   const key = btn.dataset.key;
@@ -510,18 +1166,16 @@ document.querySelectorAll('.btn[data-key]').forEach(btn => {
     state.buttons[key] = false;
     sendState();
   }
-
   btn.addEventListener('pointerup',     release, { passive: true });
   btn.addEventListener('pointercancel', release, { passive: true });
 });
 
-/* ───────────────────────────────
+/* ═══════════════════════════════════════════════════
    PREVENT BROWSER GESTURES
-─────────────────────────────── */
+═══════════════════════════════════════════════════ */
 document.addEventListener('touchstart',  e => e.preventDefault(), { passive: false });
 document.addEventListener('touchmove',   e => e.preventDefault(), { passive: false });
 document.addEventListener('contextmenu', e => e.preventDefault());
 </script>
-
 </body>
 </html>
