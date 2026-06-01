@@ -927,7 +927,7 @@ document.getElementById('key-picker-cancel').addEventListener('pointerdown', e =
 /* ═══════════════════════════════════════════════════
    START SCREEN
 ═══════════════════════════════════════════════════ */
-const WS_URL    = 'wss://controller-cloud.onrender.com/';
+const WS_URL = 'wss://mobile-controller-relay.onrender.com/ws';
 const urlParams = new URLSearchParams(window.location.search);
 let   activeRoom = (urlParams.get('room') || '').trim().toUpperCase() || null;
 let   hasJoined  = false;
