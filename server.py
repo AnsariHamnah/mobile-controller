@@ -1,177 +1,154 @@
 """
-Cloud WebSocket Relay Server  —  Room Edition
-═════════════════════════════════════════════
-Deploy this on Render (free tier).  Replace your existing server.py entirely.
+Cloud WebSocket Relay Server — aiohttp edition
+═══════════════════════════════════════════════
+Deploy this on Render. Uses aiohttp which works correctly
+behind Render's reverse proxy (the websockets library does not).
 
-How it works
-────────────
-Every connection MUST send a join message as its very first message:
+Endpoints
+─────────
+  GET /          → health check (returns 200 OK)
+  GET /health    → health check (returns 200 OK)
+  GET /ws        → WebSocket endpoint ← clients connect here
+
+Room protocol
+─────────────
+  Every client sends a join message first:
     {"type": "join", "room": "TIGER-42", "role": "phone"}
     {"type": "join", "room": "TIGER-42", "role": "pc"}
 
-After joining, every subsequent message is forwarded only to
-other connections that are in the same room.
+  Server replies:
+    {"type": "joined", "room": "TIGER-42", "role": "phone"}
 
-Rooms are created automatically when the first member joins.
-Rooms are deleted automatically when the last member leaves.
-
-No two rooms can see each other's traffic.
+  All subsequent messages are forwarded to the other
+  member of the same room only.
 """
 
-import asyncio
 import json
 import logging
 import os
+from collections import defaultdict
 
-import websockets
+import aiohttp
+from aiohttp import web
 
-# ── Logging ──────────────────────────────────────────────────────────────────
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s  %(levelname)-7s  %(message)s",
 )
 log = logging.getLogger(__name__)
 
-# ── Room registry ─────────────────────────────────────────────────────────────
-# Structure:
-#   ROOMS = {
-#       "TIGER-42": {ws_phone, ws_pc},
-#       "NOVA-18":  {ws_phone2},
-#   }
-ROOMS: dict[str, set] = {}
+# ── Room registry ──────────────────────────────────────────────────────────────
+# { "TIGER-42": {"phone": ws_or_None, "pc": ws_or_None} }
+rooms: dict = defaultdict(lambda: {"phone": None, "pc": None})
 
 
-# ── Helpers ───────────────────────────────────────────────────────────────────
+# ── Health check ───────────────────────────────────────────────────────────────
+# Render hits GET / to verify the service is alive.
+# This also lets the client wake up a sleeping free-tier instance
+# by hitting /health before opening a WebSocket.
+async def health(request: web.Request) -> web.Response:
+    active_rooms   = len(rooms)
+    active_clients = sum(
+        (1 if r["phone"] else 0) + (1 if r["pc"] else 0)
+        for r in rooms.values()
+    )
+    return web.Response(
+        text=f"OK  |  rooms={active_rooms}  clients={active_clients}",
+        status=200,
+    )
 
-def room_count() -> str:
-    """Return a short summary string for logging."""
-    total_clients = sum(len(members) for members in ROOMS.values())
-    return f"{len(ROOMS)} room(s), {total_clients} client(s)"
 
+# ── WebSocket handler ──────────────────────────────────────────────────────────
+async def websocket_handler(request: web.Request) -> web.WebSocketResponse:
+    ws = web.WebSocketResponse(heartbeat=20)
+    await ws.prepare(request)
 
-async def safe_send(ws, message: str) -> None:
-    """Send a message, silently ignoring closed connections."""
-    try:
-        await ws.send(message)
-    except websockets.ConnectionClosed:
-        pass
-
-
-# ── Main handler ──────────────────────────────────────────────────────────────
-
-async def handler(ws, path):
-    """
-    Lifecycle for one WebSocket connection:
-
-    1. Wait for the join message.
-    2. Register the connection in the correct room.
-    3. Forward all subsequent messages to room-mates only.
-    4. On disconnect: clean up the room.
-    """
-    addr = ws.remote_address
     room_code: str | None = None
-    role: str = "unknown"
+    role:      str | None = None
+
+    client_ip = request.headers.get("X-Forwarded-For", request.remote)
+    log.info(f"🔌  New connection from {client_ip}")
 
     try:
-        # ── Step 1: Expect a join message ─────────────────────────────────────
-        try:
-            raw = await asyncio.wait_for(ws.recv(), timeout=15)
-        except asyncio.TimeoutError:
-            log.warning(f"⏱  {addr} — no join message within 15 s, closing.")
-            return
+        async for msg in ws:
+            if msg.type == aiohttp.WSMsgType.TEXT:
+                # ── Parse incoming message ────────────────────────────────────
+                try:
+                    data = json.loads(msg.data)
+                except json.JSONDecodeError:
+                    continue   # drop malformed messages silently
 
-        try:
-            msg = json.loads(raw)
-        except json.JSONDecodeError:
-            log.warning(f"🚫  {addr} — first message was not valid JSON, closing.")
-            return
+                # ── Handle join (must be first message) ──────────────────────
+                if data.get("type") == "join" and room_code is None:
+                    room_code = str(data.get("room", "")).strip().upper()
+                    role      = str(data.get("role", "")).strip().lower()
 
-        
+                    if not room_code or role not in ("phone", "pc"):
+                        await ws.send_str(json.dumps({
+                            "type": "error",
+                            "msg":  "First message must be: "
+                                    '{"type":"join","room":"TIGER-42","role":"phone"}'
+                        }))
+                        continue
 
-        # Validate join message structure
-        if (
-            msg.get("type") != "join"
-            or not isinstance(msg.get("room"), str)
-            or not msg["room"].strip()
-            or msg.get("role") not in ("phone", "pc")
-        ):
-            log.warning(f"🚫  {addr} — invalid join message: {msg}, closing.")
-            return
+                    rooms[room_code][role] = ws
+                    log.info(
+                        f"✅  [{room_code}]  {role} joined  "
+                        f"(phone={rooms[room_code]['phone'] is not None}  "
+                        f"pc={rooms[room_code]['pc'] is not None})"
+                    )
 
-        room_code = msg["room"].strip().upper()
-        role = msg["role"]
+                    await ws.send_str(json.dumps({
+                        "type": "joined",
+                        "room": room_code,
+                        "role": role,
+                    }))
+                    continue
 
-        # ── Step 2: Register in room ──────────────────────────────────────────
-        if room_code not in ROOMS:
-            ROOMS[room_code] = set()
-            log.info(f"🏠  Room '{room_code}' created.")
+                # ── Ignore everything before a valid join ─────────────────────
+                if room_code is None:
+                    continue
 
-        ROOMS[room_code].add(ws)
-        log.info(
-            f"✅  [{room_code}] {role} joined  ({addr})  —  "
-            f"room now has {len(ROOMS[room_code])} member(s)  —  {room_count()}"
-        )
+                # ── Forward to the other side of the room ─────────────────────
+                room = rooms[room_code]
+                peer = room.get("pc" if role == "phone" else "phone")
 
-        # Notify the joining client that it has been accepted
-        await safe_send(ws, json.dumps({"type": "joined", "room": room_code, "role": role}))
+                if peer and not peer.closed:
+                    try:
+                        await peer.send_str(msg.data)
+                    except Exception:
+                        pass   # peer disconnected between the check and the send
 
-        # ── Step 3: Forward subsequent messages to room-mates ─────────────────
-        async for message in ws:
-            # Validate JSON before relaying (drops malformed messages silently)
-            try:
-                json.loads(message)
-            except json.JSONDecodeError:
-                log.debug(f"[{room_code}] dropped non-JSON message from {role}")
-                continue
+            elif msg.type in (aiohttp.WSMsgType.CLOSE, aiohttp.WSMsgType.ERROR):
+                break
 
-            # Only forward if there are other members in the room
-            room_members = ROOMS.get(room_code, set())
-            targets = room_members - {ws}
-
-            if targets:
-                await asyncio.gather(
-                    *[safe_send(t, message) for t in targets],
-                    return_exceptions=True,
-                )
-
-    except websockets.ConnectionClosed:
-        pass  # normal disconnect
+    except Exception as e:
+        log.warning(f"WS handler error: {e}")
 
     finally:
-        # ── Step 4: Clean up ──────────────────────────────────────────────────
-        if room_code and room_code in ROOMS:
-            ROOMS[room_code].discard(ws)
+        # ── Clean up room entry ───────────────────────────────────────────────
+        if room_code and role:
+            if rooms[room_code].get(role) is ws:
+                rooms[room_code][role] = None
+                log.info(f"👋  [{room_code}]  {role} disconnected")
 
-            if ROOMS[room_code]:
-                log.info(
-                    f"👋  [{room_code}] {role} left  ({addr})  —  "
-                    f"room still has {len(ROOMS[room_code])} member(s)"
-                )
-            else:
-                del ROOMS[room_code]
-                log.info(f"🗑   Room '{room_code}' closed (empty)  —  {room_count()}")
+            # Delete room when both sides have left
+            if rooms[room_code]["phone"] is None and rooms[room_code]["pc"] is None:
+                del rooms[room_code]
+                log.info(f"🗑   [{room_code}]  room closed")
         else:
-            log.info(f"👋  {addr} disconnected (never fully joined)")
+            log.info(f"👋  Connection closed (never joined a room)")
+
+    return ws
 
 
-# ── Entry point ───────────────────────────────────────────────────────────────
-
-async def main():
-    port = int(os.environ.get("PORT", 8765))
-    log.info(f"🚀  Relay server starting on port {port}")
-
-    async with websockets.serve(
-        handler,
-        host="0.0.0.0",
-        port=port,
-        ping_interval=20,       # keepalive ping every 20 s
-        ping_timeout=30,        # drop connection if no pong within 30 s
-        max_size=64_000,        # 64 KB cap — controller packets are tiny
-        compression=None,       # disable compression for lower latency
-    ):
-        log.info("✅  Server running.  Waiting for connections…")
-        await asyncio.Future()  # run forever
-
+# ── App setup ──────────────────────────────────────────────────────────────────
+app = web.Application()
+app.router.add_get("/",       health)
+app.router.add_get("/health", health)
+app.router.add_get("/ws",     websocket_handler)
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    port = int(os.environ.get("PORT", 8765))
+    log.info(f"🚀  Relay server starting on port {port}")
+    web.run_app(app, host="0.0.0.0", port=port, access_log=log)

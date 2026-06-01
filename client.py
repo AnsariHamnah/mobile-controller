@@ -45,8 +45,7 @@ log = logging.getLogger(__name__)
 # ══════════════════════════════════════════════════════════════════════════════
 #  CONFIGURATION  — update both URLs before running
 # ══════════════════════════════════════════════════════════════════════════════
-
-RELAY_URL = "wss://mobile-controller-relay.onrender.com"
+RELAY_URL = "wss://mobile-controller-relay.onrender.com/ws"
 PAGES_URL = "https://ansarihamnah.github.io/mobile-controller"
 
 # ── Defaults (overridden live by config messages from phone) ──────────────────
