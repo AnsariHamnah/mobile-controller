@@ -336,7 +336,8 @@ async def run(room_code: str) -> None:
                     # ── Controller state — must contain joystick data ──────────
                     if "leftJoy" not in data and "rightJoy" not in data:
                         continue   # skip unknown message types
-
+                    
+                    print("RECEIVED:", data)
                     apply_state(data)
 
         except (websockets.ConnectionClosed,

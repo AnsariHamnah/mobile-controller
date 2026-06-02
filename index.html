@@ -1014,6 +1014,7 @@ function sendState() {
   const now = performance.now();
   if (now - lastSend < 16) return;
   lastSend = now;
+  console.log("SENDING:", state);
   if (socket && socket.readyState === WebSocket.OPEN) {
     socket.send(JSON.stringify(state));
   }

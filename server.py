@@ -115,6 +115,7 @@ async def websocket_handler(request: web.Request) -> web.WebSocketResponse:
 
                 if peer and not peer.closed:
                     try:
+                        log.info(f"[{room_code}] FORWARDING TO {('pc' if role=='phone' else 'phone')}: {msg.data}")
                         await peer.send_str(msg.data)
                     except Exception:
                         pass   # peer disconnected between the check and the send
